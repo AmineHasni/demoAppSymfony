@@ -24,7 +24,7 @@ class Library
     /**
      * @var Collection<int, Shelf>
      */
-    #[ORM\OneToMany(targetEntity: Shelf::class, mappedBy: 'library')]
+    #[ORM\OneToMany(targetEntity: "App\Entity\Shelf", mappedBy: "library", cascade: ["persist", "remove"])]
     private Collection $shelves;
 
     public function __construct()

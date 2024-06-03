@@ -17,9 +17,10 @@ class Book
     private ?string $name = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    private ?string $author = null;
+    private ?string $authorName = null;
 
-    #[ORM\ManyToOne(inversedBy: 'books')]
+    #[ORM\ManyToOne(targetEntity: "App\Entity\Shelf", inversedBy: "books")]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Shelf $shelf = null;
 
     public function getId(): ?int
@@ -39,14 +40,14 @@ class Book
         return $this;
     }
 
-    public function getAuthor(): ?string
+    public function getAuthorName(): ?string
     {
-        return $this->author;
+        return $this->authorName;
     }
 
-    public function setAuthor(?string $author): static
+    public function setAuthorName(?string $authorName): static
     {
-        $this->author = $author;
+        $this->authorName = $authorName;
 
         return $this;
     }

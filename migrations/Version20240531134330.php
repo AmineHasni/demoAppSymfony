@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20240531134557 extends AbstractMigration
+final class Version20240531134330 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -27,13 +27,5 @@ final class Version20240531134557 extends AbstractMigration
         $this->addSql('ALTER TABLE shelf ADD CONSTRAINT FK_A5475BE3FE2541D7 FOREIGN KEY (library_id) REFERENCES library (id)');
     }
 
-    public function down(Schema $schema): void
-    {
-        // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE book DROP FOREIGN KEY FK_CBE5A3317C12FBC0');
-        $this->addSql('ALTER TABLE shelf DROP FOREIGN KEY FK_A5475BE3FE2541D7');
-        $this->addSql('DROP TABLE book');
-        $this->addSql('DROP TABLE library');
-        $this->addSql('DROP TABLE shelf');
-    }
+    
 }

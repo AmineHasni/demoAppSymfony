@@ -16,15 +16,16 @@ class Shelf
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $position = null;
+    private ?string $order = null;
 
     /**
      * @var Collection<int, Book>
      */
-    #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'shelf')]
+    #[ORM\OneToMany(targetEntity: "App\Entity\Book", mappedBy: "shelf", cascade: ["persist", "remove"])]
     private Collection $books;
 
-    #[ORM\ManyToOne(inversedBy: 'shelves')]
+    #[ORM\ManyToOne(targetEntity: "App\Entity\Library", inversedBy: "shelves")]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Library $library = null;
 
     public function __construct()
@@ -37,14 +38,14 @@ class Shelf
         return $this->id;
     }
 
-    public function getPosition(): ?string
+    public function getOrder(): ?string
     {
-        return $this->position;
+        return $this->order;
     }
 
-    public function setPosition(string $position): static
+    public function setOrder(string $order): static
     {
-        $this->position = $position;
+        $this->order = $order;
 
         return $this;
     }

@@ -2,14 +2,16 @@
 
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Attribute\Route;
-
-
+use App\Entity\Library;
 use App\Entity\Shelf;
+use App\Entity\Book;
 use App\Service\LibraryService;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+
 
 
 #[Route('/library')]
@@ -22,105 +24,109 @@ class LibraryController extends AbstractController
         $this->libraryService = $libraryService;
     }
 
+    #[Route('/hello', name: 'hello', methods: ['GET'])]
+    public function hello(): Response
+    {
+        return $this->json(['message' => 'Hello, World!']);
+    }
+
+    #[Route('/get', name: 'library_get', methods: ['GET'])]
+    public function getAllLibraries(): Response
+    {
+        $libraries = $this->libraryService->getAllLibraries();
+        return $this->json($libraries);
+    }
+
+    #[Route('/get/{id}', name: 'library_get', methods: ['GET'])]
+    public function getLibraryById(int $id): Response
+    {
+        $library = $this->libraryService->getLibraryById($id);
+        if (!$library) {
+            return $this->json(['message' => 'Library not found'], Response::HTTP_NOT_FOUND);
+        }
+        return $this->json($library);
+    }
+
     #[Route('/create', name: 'library_create', methods: ['POST'])]
-    public function create(Request $request): JsonResponse
+    public function addLibrary(Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
+        $library = new Library();
+        $library->setName($data['name']);
+        $library->setAddress($data['address']);
 
-        if (!$data || !isset($data['name'], $data['address'])) {
-            return new JsonResponse(['status' => 'Invalid data'], JsonResponse::HTTP_BAD_REQUEST);
+        foreach ($data['shelves'] as $shelfData) {
+            $shelf = new Shelf();
+            $shelf->setOrder($shelfData['order']);
+            $shelf->setLibrary($library);
+
+            foreach ($shelfData['books'] as $bookData) {
+                $book = new Book();
+                $book->setName($bookData['name']);
+                $book->setAuthorName($bookData['authorName']);
+                $book->setShelf($shelf);
+                $shelf->getBooks()->add($book);
+            }
+
+            $library->getShelves()->add($shelf);
         }
 
-        $library = $this->libraryService->createLibrary($data);
-
-        return new JsonResponse(['status' => 'Library created!', 'library' => $library], JsonResponse::HTTP_CREATED);
+        $this->libraryService->addLibrary($library);
+        return $this->json($library, Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', name: 'library_get', methods: ['GET'])]
-    public function get(int $id): JsonResponse
+    
+    #[Route('/update', name: 'library_update', methods: ['PUT'])]
+    public function updateLibrary(Request $request, int $id): Response
     {
-        $library = $this->libraryService->getLibrary($id);
-
+        $library = $this->libraryService->getLibraryById($id);
         if (!$library) {
-            return new JsonResponse(['status' => 'Library not found'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['message' => 'Library not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return new JsonResponse($library);
-    }
-
-    #[Route('/update/{id}', name: 'library_update', methods: ['PUT'])]
-    public function update(int $id, Request $request): JsonResponse
-    {
         $data = json_decode($request->getContent(), true);
+        $library->setName($data['name']);
+        $library->setAddress($data['address']);
 
-        if (!$data) {
-            return new JsonResponse(['status' => 'Invalid data'], JsonResponse::HTTP_BAD_REQUEST);
+        // Clear existing shelves and books
+        foreach ($library->getShelves() as $shelf) {
+            foreach ($shelf->getBooks() as $book) {
+                $shelf->getBooks()->removeElement($book);
+            }
+            $library->getShelves()->removeElement($shelf);
         }
 
-        $library = $this->libraryService->updateLibrary($id, $data);
+        // Add new shelves and books from data
+        foreach ($data['shelves'] as $shelfData) {
+            $shelf = new Shelf();
+            $shelf->setOrder($shelfData['order']);
+            $shelf->setLibrary($library);
 
+            foreach ($shelfData['books'] as $bookData) {
+                $book = new Book();
+                $book->setName($bookData['name']);
+                $book->setAuthorName($bookData['authorName']);
+                $book->setShelf($shelf);
+                $shelf->getBooks()->add($book);
+            }
+
+            $library->getShelves()->add($shelf);
+        }
+
+        $this->libraryService->updateLibrary($library);
+        return $this->json($library);
+    }
+
+   
+    #[Route('/delete', name: 'library_delete', methods: ['DELETE'])]
+    public function deleteLibrary(int $id): Response
+    {
+        $library = $this->libraryService->getLibraryById($id);
         if (!$library) {
-            return new JsonResponse(['status' => 'Library not found'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['message' => 'Library not found'], Response::HTTP_NOT_FOUND);
         }
 
-        return new JsonResponse(['status' => 'Library updated!', 'library' => $library]);
-    }
-
-    #[Route('/delete/{id}', name: 'library_delete', methods: ['DELETE'])]
-    public function delete(int $id): JsonResponse
-    {
-        $result = $this->libraryService->deleteLibrary($id);
-
-        if (!$result) {
-            return new JsonResponse(['status' => 'Library not found'], JsonResponse::HTTP_NOT_FOUND);
-        }
-
-        return new JsonResponse(['status' => 'Library deleted!']);
-    }
-
-    #[Route('/{libraryId}/add-shelf/{shelfId}', name: 'library_add_shelf', methods: ['POST'])]
-    public function addShelf(int $libraryId, int $shelfId): JsonResponse
-    {
-        $library = $this->libraryService->getLibrary($libraryId);
-        $shelf = $this->libraryService->getShelfById($shelfId);
-
-        if (!$library || !$shelf) {
-            return new JsonResponse(['status' => 'Library or Shelf not found'], JsonResponse::HTTP_NOT_FOUND);
-        }
-
-        $result = $this->libraryService->addShelfToLibrary($libraryId, $shelf);
-
-        if (!$result) {
-            return new JsonResponse(['status' => 'Failed to add shelf to library'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        return new JsonResponse(['status' => 'Shelf added to library!', 'library' => $result]);
-    }
-
-    #[Route('/{libraryId}/remove-shelf/{shelfId}', name: 'library_remove_shelf', methods: ['DELETE'])]
-    public function removeShelf(int $libraryId, int $shelfId): JsonResponse
-    {
-        $library = $this->libraryService->getLibrary($libraryId);
-        $shelf = $this->libraryService->getShelfById($shelfId);
-
-        if (!$library || !$shelf) {
-            return new JsonResponse(['status' => 'Library or Shelf not found'], JsonResponse::HTTP_NOT_FOUND);
-        }
-
-        $result = $this->libraryService->removeShelfFromLibrary($libraryId, $shelf);
-
-        if (!$result) {
-            return new JsonResponse(['status' => 'Failed to remove shelf from library'], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        return new JsonResponse(['status' => 'Shelf removed from library!', 'library' => $result]);
-    }
-
-    #[Route('/{libraryId}/shelves', name: 'library_shelves', methods: ['GET'])]
-    public function getShelvesByLibrary(int $libraryId): JsonResponse
-    {
-        $shelves = $this->libraryService->getShelvesByLibraryId($libraryId);
-
-        return new JsonResponse($shelves);
+        $this->libraryService->deleteLibrary($library);
+        return $this->json(['message' => 'Library deleted'], Response::HTTP_NO_CONTENT);
     }
 }

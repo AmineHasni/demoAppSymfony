@@ -2,111 +2,45 @@
 namespace App\Service;
 
 use App\Entity\Library;
-use App\Entity\Shelf;
 use App\Repository\LibraryRepository;
-use App\Repository\ShelfRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class LibraryService
 {
-    private $libraryRepository;
     private $entityManager;
-    private $shelfRepository;
+    private $libraryRepository;
 
-    public function __construct(LibraryRepository $libraryRepository, ShelfRepository $shelfRepository, EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, LibraryRepository $libraryRepository)
     {
-        $this->libraryRepository = $libraryRepository;
         $this->entityManager = $entityManager;
-        $this->shelfRepository = $shelfRepository;
+        $this->libraryRepository = $libraryRepository;
     }
 
-    public function createLibrary(array $data): Library
+    public function getAllLibraries()
     {
-        $library = new Library();
-        $library->setName($data['name']);
-        $library->setAddress($data['address']);
-
-        $this->entityManager->persist($library);
-        $this->entityManager->flush();
-
-        return $library;
+        return $this->libraryRepository->findAll();
     }
 
-    public function updateLibrary(int $id, array $data): ?Library
-    {
-        $library = $this->libraryRepository->find($id);
-
-        if (!$library) {
-            return null;
-        }
-
-        $library->setName($data['name'] ?? $library->getName());
-        $library->setAddress($data['address'] ?? $library->getAddress());
-
-        $this->entityManager->flush();
-
-        return $library;
-    }
-
-    public function deleteLibrary(int $id): bool
-    {
-        $library = $this->libraryRepository->find($id);
-
-        if (!$library) {
-            return false;
-        }
-
-        $this->entityManager->remove($library);
-        $this->entityManager->flush();
-
-        return true;
-    }
-
-    public function getLibrary(int $id): ?Library
+    public function getLibraryById(int $id)
     {
         return $this->libraryRepository->find($id);
     }
 
-    public function addShelfToLibrary(int $libraryId, Shelf $shelf): ?Library
+    public function addLibrary(Library $library)
     {
-        $library = $this->libraryRepository->find($libraryId);
-
-        if (!$library) {
-            return null;
-        }
-
-        $library->addShelf($shelf);
+        $this->entityManager->persist($library);
         $this->entityManager->flush();
-
-        return $library;
     }
 
-    public function removeShelfFromLibrary(int $libraryId, Shelf $shelf): ?Library
+    public function updateLibrary(Library $library)
     {
-        $library = $this->libraryRepository->find($libraryId);
-
-        if (!$library) {
-            return null;
-        }
-
-        $library->removeShelf($shelf);
+        $this->entityManager->persist($library);
         $this->entityManager->flush();
-
-        return $library;
     }
 
-    public function getShelvesByLibraryId(int $libraryId): array
+    public function deleteLibrary(Library $library)
     {
-        $library = $this->libraryRepository->find($libraryId);
-
-        if (!$library) {
-            return [];
-        }
-
-        return $library->getShelves()->toArray();
-    }
-    public function getShelfById(int $shelfId): ?Shelf
-    {
-        return $this->shelfRepository->find($shelfId);
+        $this->entityManager->remove($library);
+        $this->entityManager->flush();
     }
 }
